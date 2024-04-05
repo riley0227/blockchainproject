@@ -39,16 +39,30 @@ async function setupEventListeners() {
 }
 
 async function addCandidate(name) {
-    try {
-        const addCandidateTx = await contract.addCandidate(name);
-        await addCandidateTx.wait();
-        console.log(`${name} added as a candidate.`);
-        await displayResults(); // Refresh the candidates list
-    } catch (error) {
-        console.error('Error adding candidate:', error);
-        alert('Failed to add candidate.');
-    }
+  try {
+      const addCandidateTx = await contract.addCandidate(name);
+      const receipt = await addCandidateTx.wait();
+      console.log(`${name} added as a candidate. Transaction receipt:`, receipt);
+      await displayResults(); // Refresh the candidates list
+  } catch (error) {
+      console.error('Error adding candidate:', error);
+      
+      // Check for a transaction hash on the error object
+      if (error.transactionHash) {
+          console.log(`Transaction Hash: ${error.transactionHash}`);
+          try {
+              // Retrieve the transaction receipt using the hash
+              const failedTransactionReceipt = await signer.provider.getTransactionReceipt(error.transactionHash);
+              console.error('Failed transaction receipt:', failedTransactionReceipt);
+          } catch (receiptError) {
+              console.error('Error fetching transaction receipt:', receiptError);
+          }
+      }
+      
+      alert(`Failed to add candidate. Error: ${error.message}`);
+  }
 }
+
 
 async function voteForCandidate(candidateId) {
     try {
