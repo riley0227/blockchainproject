@@ -7,21 +7,18 @@ contract VotingContract {
         uint voteCount;
     }
 
-    // Define the Vote struct here
-    struct Vote {
-        address voter;
-        uint candidateId;
-    }
-
+    uint public votingStartTime;
+    uint public votingEndTime;
     mapping(address => bool) public hasVoted;
     mapping(uint => Candidate) public candidates;
-    mapping(address => Vote) public votes; // Now the compiler knows what a Vote is
     uint public candidatesCount;
 
-    event Voted(address indexed _voter, uint indexed _candidateId);
     event CandidateAdded(uint indexed _candidateId, string _name);
+    event Voted(address indexed _voter, uint indexed _candidateId);
 
     constructor() public {
+        votingStartTime = now; // 'now' is an alias for block.timestamp
+        votingEndTime = now + 2 days; // Sets the end time to 2 days from now
         addCandidate("Candidate 1");
         addCandidate("Candidate 2");
     }
@@ -33,14 +30,17 @@ contract VotingContract {
     }
 
     function vote(uint _candidateId) public {
+        require(now >= votingStartTime && now <= votingEndTime, "Voting is not active.");
         require(!hasVoted[msg.sender], "Already voted.");
         require(_candidateId > 0 && _candidateId <= candidatesCount, "Invalid candidate.");
 
         hasVoted[msg.sender] = true;
         candidates[_candidateId].voteCount++;
-        // Record the vote with a new Vote struct instance
-        votes[msg.sender] = Vote(msg.sender, _candidateId);
-
         emit Voted(msg.sender, _candidateId);
+    }
+
+    // Helper function to check if voting is active
+    function isVotingActive() public view returns (bool) {
+        return now >= votingStartTime && now <= votingEndTime;
     }
 }

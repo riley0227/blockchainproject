@@ -1,10 +1,22 @@
-const contractAddress = '0x1B9fc07Bf8A11f6CE23bDd0b07d391228e9a71E2';
+const contractAddress = '0xB05AdA7716d64f1EC8f5e143e49546030Bb7acF2';
 let contract;
 let signer;
+
+async function displayVotingTimes() {
+  const votingStartTime = await contract.getVotingStartTime();
+  const votingEndTime = await contract.getVotingEndTime();
+  
+  const startTime = new Date(votingStartTime * 1000).toLocaleString();
+  const endTime = new Date(votingEndTime * 1000).toLocaleString();
+  
+  document.getElementById('votingStartTime').textContent = `Voting starts at: ${startTime}`;
+  document.getElementById('votingEndTime').textContent = `Voting ends at: ${endTime}`;
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   await initWeb3();
   setupEventListeners();
+  displayVotingPeriod();
 });
 
 async function initWeb3() {
@@ -121,6 +133,15 @@ async function checkIfVoted() {
     console.error("Error checking voting status", error);
   }
 }
+
+async function displayVotingPeriod() {
+  const startTime = await contract.votingStartTime();
+  const endTime = await contract.votingEndTime();
+
+  document.getElementById('votingStartTime').innerText = `Voting starts at: ${new Date(startTime * 1000).toLocaleString()}`;
+  document.getElementById('votingEndTime').innerText = `Voting ends at: ${new Date(endTime * 1000).toLocaleString()}`;
+}
+
 
 // Update this with your voting contract's ABI
 const votingABI = [
