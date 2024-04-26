@@ -1,89 +1,126 @@
-const contractAddress = '0x664821C1635b00D83FC74f41D3eDCA6c9d8A7a30';
-
-let contract; // Global contract instance
-let signer; // Global signer
+const contractAddress = '0x1B9fc07Bf8A11f6CE23bDd0b07d391228e9a71E2';
+let contract;
+let signer;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await initWeb3();
-    setupEventListeners();
+  await initWeb3();
+  setupEventListeners();
 });
 
 async function initWeb3() {
-    if (typeof ethereum !== 'undefined') {
-        await ethereum.request({ method: 'eth_requestAccounts' });
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        signer = provider.getSigner();
-        contract = new ethers.Contract(contractAddress, votingABI, signer);
-    } else {
-        console.error("Ethereum object doesn't exist!");
-    }
-}
-
-async function setupEventListeners() {
-    document.getElementById('voteButton').addEventListener('click', async () => {
-        const selectedCandidateId = parseInt(document.getElementById('voteOption').value);
-        await voteForCandidate(selectedCandidateId);
-    });
-
-    document.getElementById('addCandidateButton').addEventListener('click', async () => {
-        const candidateName = document.getElementById('newCandidateName').value.trim();
-        if (candidateName) {
-            await addCandidate(candidateName);
-        } else {
-            alert("Please enter a candidate name.");
-        }
-    });
-
-    // Call displayResults at the end of init to ensure contract is set up
-    if (contract) await displayResults();
-}
-
-async function addCandidate(name) {
-    try {
-        const addCandidateTx = await contract.addCandidate(name);
-        await addCandidateTx.wait();
-        console.log(`${name} added as a candidate.`);
-        await displayResults(); // Refresh the candidates list
-    } catch (error) {
-        console.error('Error adding candidate:', error);
-        alert('Failed to add candidate.');
-    }
-}
-
-async function voteForCandidate(candidateId) {
-    try {
-        const voteTx = await contract.vote(candidateId);
-        await voteTx.wait();
-        console.log('Vote cast successfully.');
-        await displayResults(); // Refresh the results after voting
-    } catch (error) {
-        console.error('Error casting vote:', error);
-        alert('Failed to cast vote.');
-    }
-}
-
-async function displayResults() {
-  const resultsElement = document.getElementById('votingResults');
-  const voteOptionElement = document.getElementById('voteOption'); // Get the dropdown menu element
-  resultsElement.innerHTML = ''; // Clear previous results
-  voteOptionElement.innerHTML = ''; // Clear existing options in the dropdown
-
-  const candidatesCount = await contract.candidatesCount();
-
-  for (let i = 1; i <= candidatesCount; i++) {
-      const candidate = await contract.candidates(i);
-      const resultItem = document.createElement('li');
-      resultItem.textContent = `${candidate.name}: ${candidate.voteCount.toString()} votes`;
-      resultsElement.appendChild(resultItem);
-
-      // Create new option element for each candidate and add to the dropdown
-      const optionElement = document.createElement('option');
-      optionElement.value = candidate.id.toString();
-      optionElement.textContent = candidate.name;
-      voteOptionElement.appendChild(optionElement);
+  try {
+      if (typeof ethereum !== 'undefined') {
+          await ethereum.request({ method: 'eth_requestAccounts' });
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          contract = new ethers.Contract(contractAddress, votingABI, signer);
+          console.log("Contract initialized");
+          await displayResults();
+          await checkIfVoted();
+      } else {
+          console.error("Ethereum object doesn't exist!");
+      }
+  } catch (error) {
+      console.error("initWeb3 error:", error);
   }
 }
 
+function setupEventListeners() {
+  document.getElementById('voteButton').addEventListener('click', vote);
+  document.getElementById('addCandidateButton').addEventListener('click', addCandidate);
+}
+
+async function vote() {
+  const redID = document.getElementById('redIDInput').value;
+  if (!isValidRedID(redID)) {
+      alert("Invalid RedID.");
+      return;
+  }
+  const selectedCandidateId = parseInt(document.getElementById('voteOption').value);
+  document.getElementById('voteButton').disabled = true; // Disable the button immediately after click
+
+  try {
+    // First, check if the user has already voted
+    const alreadyVoted = await contract.hasVoted(signer.getAddress());
+    if (alreadyVoted) {
+      alert("You have already voted.");
+      document.getElementById('voteButton').disabled = false; // Re-enable the button
+      return;
+    }
+
+    const transaction = await contract.vote(selectedCandidateId);
+    await transaction.wait();
+    console.log('Vote successfully cast.');
+    await displayResults();
+  } catch (error) {
+    console.error("Vote button error:", error);
+    alert("Failed to cast vote: " + error.message); // Provide error feedback
+  } finally {
+    document.getElementById('voteButton').disabled = false; // Re-enable the button
+  }
+}
+
+async function addCandidate() {
+  const redID = document.getElementById('redIDInput').value;
+  if (!isValidRedID(redID)) {
+      alert("Invalid RedID.");
+      return;
+  }
+  const candidateName = document.getElementById('newCandidateName').value.trim();
+  document.getElementById('addCandidateButton').disabled = true;
+  if (!candidateName) {
+      alert("Please enter a candidate name.");
+      return;
+  }
+  try {
+      const transaction = await contract.addCandidate(candidateName);
+      await transaction.wait();
+      console.log(`${candidateName} added as a candidate.`);
+      await displayResults();
+  } catch (error) {
+      console.error("Add candidate button error:", error);
+  } finally {
+      document.getElementById('addCandidateButton').disabled = false;
+  }
+}
+
+function isValidRedID(redID) {
+  return redID.length === 9 && (redID.startsWith('1') || redID.startsWith('8'));
+}
+
+async function displayResults() {
+  try {
+      const resultsElement = document.getElementById('votingResults');
+      const voteOptionElement = document.getElementById('voteOption');
+      resultsElement.innerHTML = '';  // Clear previous results
+      voteOptionElement.innerHTML = '';  // Clear previous vote options
+
+      const candidatesCount = await contract.candidatesCount();
+      console.log(`Displaying results for ${candidatesCount} candidates.`);
+
+      for (let i = 1; i <= candidatesCount; i++) {
+          const candidate = await contract.candidates(i);
+          const resultItem = document.createElement('li');
+          resultItem.textContent = `${candidate.name}: ${candidate.voteCount.toString()} votes`;
+          resultsElement.appendChild(resultItem);
+
+          // Create new option element for each candidate and add to the dropdown
+          const optionElement = new Option(candidate.name, candidate.id);
+          voteOptionElement.appendChild(optionElement);
+      }
+  } catch (error) {
+      console.error("displayResults error:", error);
+  }
+}
+
+async function checkIfVoted() {
+  try {
+    const hasVoted = await contract.hasVoted(signer.getAddress());
+    document.getElementById('voteButton').disabled = hasVoted;
+  } catch (error) {
+    console.error("Error checking voting status", error);
+  }
+}
 
 // Update this with your voting contract's ABI
 const votingABI = [

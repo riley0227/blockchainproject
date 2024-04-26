@@ -24,6 +24,7 @@
     },
     "dependencies": {
         "@truffle/contract": "^4.6.31",
+        "debug": "^4.3.4",
         "web3": "^4.7.0"
     }
 }

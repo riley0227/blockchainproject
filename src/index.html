@@ -27,7 +27,7 @@
         button:hover {
             background-color: #a00f2a;
         }
-        select {
+        select, input {
             padding: 10px;
             width: 100%;
             margin-top: 10px;
@@ -38,19 +38,16 @@
 <body>
     <h1>SDSU Student Government Elections</h1>
     <p>Vote for your preferred candidate for the upcoming student government positions.</p>
+    <p>Enter your RedID:</p>
+    <input type="text" id="redIDInput" placeholder="Enter your 9-digit RedID">
     <select id="voteOption">
-        <!-- Example candidate names -->
-        <option value="1">Jane Doe - President</option>
-        <option value="2">John Smith - Vice President</option>
-        <!-- Add more candidates and positions as needed -->
     </select>
     <button id="voteButton">Cast Vote</button>
-
     <h2>Election Results</h2>
     <ul id="votingResults"></ul>
-    <script src="app.js" type="application/javascript"></script>
     <h2>Add Yourself as a Candidate</h2>
-<input type="text" id="newCandidateName" placeholder="Enter your name"/>
-<button id="addCandidateButton">Add as Candidate</button>
+    <input type="text" id="newCandidateName" placeholder="Enter your name">
+    <button id="addCandidateButton">Add as Candidate</button>
+    <script src="app.js" type="application/javascript"></script>
 </body>
 </html>
