@@ -24,6 +24,7 @@
     },
     "dependencies": {
         "@truffle/contract": "^4.6.31",
+        "sqlite3": "^5.1.7",
         "web3": "^4.7.0"
     }
 }

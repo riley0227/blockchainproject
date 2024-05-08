@@ -7,7 +7,6 @@ contract VotingContract {
         uint voteCount;
     }
 
-    // Define the Vote struct here
     struct Vote {
         address voter;
         uint candidateId;
@@ -15,32 +14,52 @@ contract VotingContract {
 
     mapping(address => bool) public hasVoted;
     mapping(uint => Candidate) public candidates;
-    mapping(address => Vote) public votes; // Now the compiler knows what a Vote is
+    mapping(address => Vote) public votes;
+    mapping(uint => address) public studentIdToAddress; // Maps student IDs to addresses
     uint public candidatesCount;
 
-    event Voted(address indexed _voter, uint indexed _candidateId);
-    event CandidateAdded(uint indexed _candidateId, string _name);
+    uint public startTime;
+    uint public votingDuration;
 
-    constructor() public {
-        addCandidate("Candidate 1");
-        addCandidate("Candidate 2");
+    event Voted(address indexed _voter, uint indexed _studentId, uint indexed _candidateId);
+    event CandidateAdded(address indexed _adder, uint indexed _studentId, uint indexed _candidateId, string _name);
+
+    constructor(uint _votingDuration) public {
+        startTime = now; // 'now' is an alias for 'block.timestamp', which gets the current block timestamp
+        votingDuration = _votingDuration; // Set the voting duration in seconds
+
+        addCandidate("Candidate 1", 10001);
+        addCandidate("Candidate 2", 10002);
     }
 
-    function addCandidate(string memory _name) public {
+    modifier withinVotingPeriod() {
+        require(now <= startTime + votingDuration, "Voting period has ended.");
+        _;
+    }
+
+    function addCandidate(string memory _name, uint _studentId) public withinVotingPeriod {
+        require(studentIdToAddress[_studentId] == address(0) || studentIdToAddress[_studentId] == msg.sender, "This student ID is already used with a different address.");
+        if (studentIdToAddress[_studentId] == address(0)) {
+            studentIdToAddress[_studentId] = msg.sender;
+        }
         candidatesCount++;
         candidates[candidatesCount] = Candidate(candidatesCount, _name, 0);
-        emit CandidateAdded(candidatesCount, _name);
+        emit CandidateAdded(msg.sender, _studentId, candidatesCount, _name);
     }
 
-    function vote(uint _candidateId) public {
-        require(!hasVoted[msg.sender], "Already voted.");
+    function vote(uint _candidateId, uint _studentId) public withinVotingPeriod {
+        require(studentIdToAddress[_studentId] == address(0) || studentIdToAddress[_studentId] == msg.sender, "This student ID is already used with a different address.");
         require(_candidateId > 0 && _candidateId <= candidatesCount, "Invalid candidate.");
+        require(!hasVoted[msg.sender], "You have already voted.");
+
+        if (studentIdToAddress[_studentId] == address(0)) {
+            studentIdToAddress[_studentId] = msg.sender;
+        }
 
         hasVoted[msg.sender] = true;
         candidates[_candidateId].voteCount++;
-        // Record the vote with a new Vote struct instance
         votes[msg.sender] = Vote(msg.sender, _candidateId);
 
-        emit Voted(msg.sender, _candidateId);
+        emit Voted(msg.sender, _studentId, _candidateId);
     }
 }

@@ -3,7 +3,8 @@
 const VotingContract = artifacts.require("VotingContract");
 
 module.exports = function(deployer) {
-  deployer.deploy(VotingContract)
+  const votingPeriodInSeconds = 90;
+  deployer.deploy(VotingContract, votingPeriodInSeconds)
     .then(() => {
         // If you need to perform actions after deployment, do them here.
         console.log("VotingContract deployed to:", VotingContract.address);
